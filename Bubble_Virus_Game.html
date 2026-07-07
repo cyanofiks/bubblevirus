@@ -1,0 +1,113 @@
+
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bubble Virus</title>
+<style>
+body{margin:0;background:#87cfff;font-family:Arial}
+#ui{position:sticky;top:0;background:#ffffffdd;padding:10px;display:flex;gap:20px;font-weight:bold}
+#grid{display:grid;grid-template-columns:repeat(18,40px);gap:6px;justify-content:center;padding:15px}
+.b{width:40px;height:40px;border-radius:50%;
+background:radial-gradient(circle at 30% 30%,#fff,#c8eeff,#74baff);
+box-shadow:inset 0 3px 6px #fff8,0 2px 5px #0003;cursor:pointer;
+transition:.15s}
+.pop{background:#777!important;transform:scale(.75);pointer-events:none}
+.msg{position:fixed;left:50%;top:55px;transform:translateX(-50%);font-size:32px;font-weight:bold}
+</style>
+</head>
+<body>
+<div id="ui">
+<div>Score: <span id=s>0</span></div>
+<div>Wave: <span id=w>1</span></div>
+<div>Virusa: <span id=v>0</span></div>
+<button onclick="restart()">Restart</button>
+</div>
+<div class=msg id=msg></div>
+<div id=grid></div>
+<script>
+const R=12,C=18;
+let score=0,wave=1,gameOver=false;
+const grid=document.getElementById("grid");
+let cells=[],viruses=[];
+function idx(r,c){return r*C+c}
+function make(){
+ grid.innerHTML="";cells=[];viruses=[];
+ for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+   let d=document.createElement("div");
+   d.className="b";
+   d.dataset.r=r;d.dataset.c=c;
+   d.state="normal"; d.progress=0;
+   d.onclick=()=>pop(d);
+   grid.appendChild(d); cells.push(d);
+ }
+ spawnVirus();
+ update();
+}
+function pop(d){
+ if(gameOver||d.classList.contains("pop"))return;
+
+ // Virus se ne može kliknuti
+ if(d.state==="virus") return;
+
+ d.classList.add("pop");
+ d.state="wall";
+ score+=10;
+ s.textContent=score;
+}
+function spawnVirus(){
+ let opts=cells.filter(x=>x.state==="normal");
+ if(!opts.length)return;
+ let d=opts[Math.floor(Math.random()*opts.length)];
+ d.state="virus";d.progress=0;
+ viruses.push(d);
+}
+function tick(){
+ if(gameOver)return;
+ for(let i=viruses.length-1;i>=0;i--){
+  let d=viruses[i];
+  if(d.classList.contains("pop")){viruses.splice(i,1);continue;}
+  d.progress+=0.2;
+  let g=Math.min(255,Math.floor(d.progress/5*255));
+  d.style.background="radial-gradient(circle at 30% 30%,#fff,rgb("+(255-g)+",255,"+(255-g)+"),rgb(0,"+g+",0))";
+  if(d.progress>=5){
+    spread(d);
+    viruses.splice(i,1);
+    d.state="spent";
+  }
+ }
+ if(viruses.length==0){
+   wave++;w.textContent=wave;
+   for(let i=0;i<Math.min(1+Math.floor(wave/2),6);i++)spawnVirus();
+ }
+ update();
+}
+function spread(d){
+ let r=+d.dataset.r,c=+d.dataset.c;
+ let any=false;
+ for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+   if(!dr&&!dc)continue;
+   let nr=r+dr,nc=c+dc;
+   if(nr<0||nc<0||nr>=R||nc>=C)continue;
+   let n=cells[idx(nr,nc)];
+   if(n.state==="normal"){
+      n.state="virus";n.progress=0;viruses.push(n);any=true;
+   }
+ }
+ d.classList.add("pop");
+ if(!any && viruses.length==0){score+=100;}
+}
+function update(){
+ v.textContent=viruses.length;
+ if(viruses.length>80){
+   gameOver=true;
+   msg.textContent="GAME OVER";
+ }
+}
+function restart(){score=0;wave=1;gameOver=false;s.textContent=0;w.textContent=1;msg.textContent="";make();}
+make();
+setInterval(tick,200);
+</script>
+</body>
+</html>
